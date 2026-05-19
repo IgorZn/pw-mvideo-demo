@@ -1,0 +1,24 @@
+{
+  "name": "pw-mvideo-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "api:all": "npx playwright test tests/api/",
+    "api:ui": "npx playwright test --project=ui",
+    "show-report": "npx playwright show-report --port 8080"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.15",
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.8.0",
+    "allure-playwright": "^3.8.0",
+    "typescript": "^5.5.3"
+  },
+  "private": true,
+  "dependencies": {
+    "dorama": "^1.0.2",
+    "dotenv": "^17.4.2"
+  }
+}
