@@ -28,23 +28,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Upload node_modules artifact
+      - name: Upload entire workspace (including node_modules)
         uses: actions/upload-artifact@v4
         with:
-          name: node_modules
+          name: workspace
           path: |
             node_modules
-            dist/
             package-lock.json
-          retention-days: 1
-
-      - name: Upload playwright config
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-config
-          path: |
             playwright.config.ts
             tsconfig.json
+            src/
+            tests/
           retention-days: 1
 
   # ==================== SETUP BROWSERS JOB ====================
@@ -57,14 +51,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download node_modules
+      - name: Download workspace
         uses: actions/download-artifact@v4
         with:
-          name: node_modules
+          name: workspace
           path: .
 
+      - name: Debug - Check if Playwright is installed
+        run: |
+          ls -la node_modules/.bin/ | grep playwright || echo "Playwright not found in .bin"
+          npx playwright --version || echo "Playwright command failed"
+
       - name: Install Playwright Chromium
-        run: npx playwright install chromium --with-deps
+        run: |
+          npx playwright install chromium --with-deps
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
 
       - name: Upload browsers artifact
         uses: actions/upload-artifact@v4
@@ -83,16 +85,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download node_modules
+      - name: Download workspace
         uses: actions/download-artifact@v4
         with:
-          name: node_modules
-          path: .
-
-      - name: Download playwright config
-        uses: actions/download-artifact@v4
-        with:
-          name: playwright-config
+          name: workspace
           path: .
 
       - name: Download browsers
@@ -101,9 +97,11 @@ jobs:
           name: playwright-browsers
           path: ~/.cache/ms-playwright
 
+      - name: Set PLAYWRIGHT_BROWSERS_PATH
+        run: echo "PLAYWRIGHT_BROWSERS_PATH=~/.cache/ms-playwright" >> $GITHUB_ENV
+
       - name: Run UI tests
         run: npx playwright test --project=ui
-        continue-on-error: false
 
       - name: Upload UI test results
         if: always()
@@ -123,21 +121,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download node_modules
+      - name: Download workspace
         uses: actions/download-artifact@v4
         with:
-          name: node_modules
-          path: .
-
-      - name: Download playwright config
-        uses: actions/download-artifact@v4
-        with:
-          name: playwright-config
+          name: workspace
           path: .
 
       - name: Run API tests
         run: npx playwright test --project=api
-        continue-on-error: false
 
       - name: Upload API test results
         if: always()
@@ -155,26 +146,24 @@ jobs:
     needs: [test-ui, test-api]
     if: always()
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Download UI test results
         uses: actions/download-artifact@v4
         with:
           name: ui-test-results
-          path: playwright-report/
+          path: reports/ui/
 
       - name: Download API test results
         uses: actions/download-artifact@v4
         with:
           name: api-test-results
-          path: playwright-report/
+          path: reports/api/
 
-      - name: Merge reports
+      - name: Merge and upload final report
         run: |
           mkdir -p final-report
-          cp -r playwright-report/* final-report/ 2>/dev/null || true
-          cp -r playwright-report/* final-report/ 2>/dev/null || true
+          cp -r reports/ui/* final-report/ 2>/dev/null || true
+          cp -r reports/api/* final-report/ 2>/dev/null || true
+          echo "Final report ready"
 
       - name: Upload final report
         uses: actions/upload-artifact@v4
