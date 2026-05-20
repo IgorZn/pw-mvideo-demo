@@ -25,15 +25,15 @@ export class PokemonAPI extends BaseAPI {
     }
 
     async getPokemonById(id: number): Promise<Pokemon> {
-        return this.get<Pokemon>(`/pokemon/${id}`);
+        return this.get(`/pokemon/${id}`);
     }
 
     async getPokemonByName(name: string): Promise<Pokemon> {
-        return this.get<Pokemon>(`/pokemon/${name.toLowerCase()}`);
+        return this.get(`/pokemon/${name.toLowerCase()}`);
     }
 
     async getPokemonList(limit: number = 20, offset: number = 0): Promise<PokemonList> {
-        return this.getAll<PokemonList>('/pokemon', limit, offset);
+        return this.getAll('/pokemon', limit, offset);
     }
 
     async getPokemonNotFound(name: string) {

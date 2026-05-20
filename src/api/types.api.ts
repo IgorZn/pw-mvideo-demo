@@ -21,11 +21,11 @@ export class TypesAPI extends BaseAPI {
     }
 
     async getTypeById(id: number): Promise<PokemonType> {
-        return this.get<PokemonType>(`/type/${id}`);
+        return this.get(`/type/${id}`);
     }
 
     async getTypeByName(name: string): Promise<PokemonType> {
-        return this.get<PokemonType>(`/type/${name.toLowerCase()}`);
+        return this.get(`/type/${name.toLowerCase()}`);
     }
 
     async getTypeList(limit: number = 20, offset: number = 0): Promise<any> {

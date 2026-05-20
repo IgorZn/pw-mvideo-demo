@@ -14,11 +14,11 @@ export class AbilitiesAPI extends BaseAPI {
     }
 
     async getAbilityById(id: number): Promise<Ability> {
-        return this.get<Ability>(`/ability/${id}`);
+        return this.get(`/ability/${id}`);
     }
 
     async getAbilityByName(name: string): Promise<Ability> {
-        return this.get<Ability>(`/ability/${name.toLowerCase()}`);
+        return this.get(`/ability/${name.toLowerCase()}`);
     }
 
     async getAbilityList(limit: number = 20, offset: number = 0): Promise<any> {

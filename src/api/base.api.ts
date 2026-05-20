@@ -36,6 +36,6 @@ export class BaseAPI {
     }
 
     protected async getAll<T>(endpoint: string, limit: number = 20, offset: number = 0): Promise<T> {
-        return this.get<T>(`${endpoint}?limit=${limit}&offset=${offset}`);
+        return this.get(`${endpoint}?limit=${limit}&offset=${offset}`);
     }
 }
