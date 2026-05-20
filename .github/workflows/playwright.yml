@@ -28,9 +28,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build TypeScript
-        run: npm run build
-
       - name: Upload node_modules artifact
         uses: actions/upload-artifact@v4
         with:
@@ -165,19 +162,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ui-test-results
-          path: reports/ui/
+          path: playwright-report/
 
       - name: Download API test results
         uses: actions/download-artifact@v4
         with:
           name: api-test-results
-          path: reports/api/
+          path: playwright-report/
 
       - name: Merge reports
         run: |
           mkdir -p final-report
-          cp -r reports/ui/* final-report/ 2>/dev/null || true
-          cp -r reports/api/* final-report/ 2>/dev/null || true
+          cp -r playwright-report/* final-report/ 2>/dev/null || true
+          cp -r playwright-report/* final-report/ 2>/dev/null || true
 
       - name: Upload final report
         uses: actions/upload-artifact@v4
