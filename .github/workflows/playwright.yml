@@ -7,19 +7,20 @@ on:
     branches: [ main, master ]
 
 env:
-  # Опционально: принудительно используем Node.js 24 на runner (из-за депрекейшена Node 20)
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  test:
-    timeout-minutes: 60
+  # ==================== BUILD JOB ====================
+  build:
+    name: 📦 Build & Install Dependencies
+    timeout-minutes: 10
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
-        continue-on-error: false
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: lts/*
           cache: 'npm'
@@ -27,19 +28,160 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright Chromium
-        run: |
-          npx playwright install chromium --with-deps
-        # Убеждаемся, что Playwright доступен после установки
-        working-directory: ${{ github.workspace }}
+      - name: Build TypeScript
+        run: npm run build
 
-      - name: Run Playwright tests
-        run: npx playwright test --project=chromium
+      - name: Upload node_modules artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_modules
+          path: |
+            node_modules
+            dist/
+            package-lock.json
+          retention-days: 1
+
+      - name: Upload playwright config
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-config
+          path: |
+            playwright.config.ts
+            tsconfig.json
+          retention-days: 1
+
+  # ==================== SETUP BROWSERS JOB ====================
+  setup-browsers:
+    name: 🌐 Install Playwright Browsers
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: .
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Upload browsers artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-browsers
+          path: ~/.cache/ms-playwright
+          retention-days: 1
+
+  # ==================== UI TESTS JOB ====================
+  test-ui:
+    name: 🧪 Run UI Tests
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    needs: setup-browsers
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: .
+
+      - name: Download playwright config
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-config
+          path: .
+
+      - name: Download browsers
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-browsers
+          path: ~/.cache/ms-playwright
+
+      - name: Run UI tests
+        run: npx playwright test --project=ui
         continue-on-error: false
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload UI test results
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: ui-test-results
           path: playwright-report/
+          retention-days: 30
+
+  # ==================== API TESTS JOB ====================
+  test-api:
+    name: 🔌 Run API Tests
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: .
+
+      - name: Download playwright config
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-config
+          path: .
+
+      - name: Run API tests
+        run: npx playwright test --project=api
+        continue-on-error: false
+
+      - name: Upload API test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: playwright-report/
+          retention-days: 30
+
+  # ==================== REPORT JOB ====================
+  report:
+    name: 📊 Generate & Upload Final Report
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    needs: [test-ui, test-api]
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download UI test results
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-test-results
+          path: reports/ui/
+
+      - name: Download API test results
+        uses: actions/download-artifact@v4
+        with:
+          name: api-test-results
+          path: reports/api/
+
+      - name: Merge reports
+        run: |
+          mkdir -p final-report
+          cp -r reports/ui/* final-report/ 2>/dev/null || true
+          cp -r reports/api/* final-report/ 2>/dev/null || true
+
+      - name: Upload final report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-final-report
+          path: final-report/
           retention-days: 30
